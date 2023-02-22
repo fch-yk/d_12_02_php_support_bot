@@ -1,4 +1,0 @@
-Django==3.2.15
-environs==9.3.2
-python-telegram-bot==12.5.1
-
