@@ -6,7 +6,7 @@ from .models import RegistrationRequest, ChatState
 @admin.register(RegistrationRequest)
 class RegistrationRequestAdmin(admin.ModelAdmin):
     list_display = [
-        'id',
+        'telegram_user_id',
         'partner_role',
         'name',
         'status',

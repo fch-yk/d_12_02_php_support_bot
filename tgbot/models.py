@@ -54,6 +54,10 @@ class RegistrationRequest(models.Model):
         db_index=True,
     )
 
+    telegram_user_id = models.IntegerField(
+        verbose_name='ID пользователя Telegram',
+    )
+
     class Meta:
         verbose_name = 'запрос на регистрацию'
         verbose_name_plural = 'запросы на регистрацию'
