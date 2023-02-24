@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import (ChatState, Client, Manager, Order, RegistrationRequest,
-                     Subcontractor)
+                     Subcontractor, Subscription, Tariff)
 
 
 @admin.register(RegistrationRequest)
@@ -65,3 +65,28 @@ class OrderAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ['id', 'created_at', 'modified_at']
     ordering = ['status', 'created_at']
+
+
+@admin.register(Tariff)
+class TariffAdmin(admin.ModelAdmin):
+    list_display = [
+        'variant',
+        'max_orders_number',
+        'fix_subcontractor_ability',
+        'get_contractor_contacts_ability',
+        'order_review_period',
+    ]
+    readonly_fields = ['id']
+    ordering = ['variant']
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = [
+        'begins_at',
+        'client',
+        'tariff',
+        'subcontractor',
+    ]
+    readonly_fields = ['id']
+    ordering = ['begins_at']
