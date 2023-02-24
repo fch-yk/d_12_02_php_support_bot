@@ -210,6 +210,20 @@ class Order(models.Model):
         db_index=True,
     )
 
+    client_site_login = models.CharField(
+        verbose_name='логин сайта клиента',
+        max_length=20,
+        blank=True,
+        editable=False,
+    )
+
+    client_site_password = models.CharField(
+        verbose_name='пароль сайта клиента',
+        max_length=20,
+        blank=True,
+        editable=False,
+    )
+
     class Meta:
         verbose_name = 'заказ'
         verbose_name_plural = 'заказы'
