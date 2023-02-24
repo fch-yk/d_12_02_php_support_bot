@@ -99,4 +99,50 @@ class ChatState(models.Model):
         ordering = ['-modified_at']
 
     def __str__(self):
-        return (f'Состояние чата {self.chat_id}')
+        return f'Состояние чата {self.chat_id}'
+
+
+class Partner(models.Model):
+    telegram_user_id = models.IntegerField(
+        verbose_name='ID пользователя Telegram',
+        primary_key=True,
+    )
+    name = models.CharField(
+        verbose_name='наименование',
+        max_length=150,
+        db_index=True,
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ['name']
+
+    def __str__(self):
+        return (
+            f'{self._meta.verbose_name.capitalize()} {self.name} '
+            f'({self.telegram_user_id})'
+        )
+
+
+class Client(Partner):
+    class Meta:
+        verbose_name = 'клиент'
+        verbose_name_plural = 'клиенты'
+
+
+class Subcontractor(Partner):
+    is_banned = models.BooleanField(
+        verbose_name='заблокирован',
+        db_index=True,
+        default=False,
+    )
+
+    class Meta:
+        verbose_name = 'подрядчик'
+        verbose_name_plural = 'подрядчики'
+
+
+class Manager(Partner):
+    class Meta:
+        verbose_name = 'менеджер'
+        verbose_name_plural = 'менеджеры'

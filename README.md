@@ -58,6 +58,11 @@ python manage.py runserver
 
 - Go to [the admin site](http://127.0.0.1:8000/admin/) and fill the base;
 - Go to [the home page](http://127.0.0.1:8000/).
+- Start the bot:
+
+```bash
+python manage.py start_bot
+```
 
 ## Project goals
 
