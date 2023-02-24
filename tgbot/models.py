@@ -146,3 +146,73 @@ class Manager(Partner):
     class Meta:
         verbose_name = 'менеджер'
         verbose_name_plural = 'менеджеры'
+
+
+class Order(models.Model):
+    UNPROCESSED = 'A1-UP'
+    IN_PROGRESS = 'B1-IP'
+    COMPLETED = 'C1-CO'
+    DECLINED = 'D1-DE'
+    STATUS_CHOICES = [
+        (UNPROCESSED, 'Необработанный'),
+        (IN_PROGRESS, 'В работе'),
+        (COMPLETED, 'Выполнен'),
+        (DECLINED, 'Отклонен'),
+    ]
+
+    client = models.ForeignKey(
+        'Client',
+        on_delete=models.PROTECT,
+        verbose_name='клиент',
+        related_name='orders',
+    )
+
+    subcontractor = models.ForeignKey(
+        'Subcontractor',
+        on_delete=models.PROTECT,
+        verbose_name='подрядчик',
+        related_name='orders',
+        blank=True,
+        null=True,
+    )
+
+    description = models.TextField(
+        verbose_name='описание',
+    )
+
+    time_estimation = models.TextField(
+        verbose_name='оценка времени',
+        blank=True,
+    )
+
+    status = models.CharField(
+        verbose_name='статус',
+        max_length=5,
+        choices=STATUS_CHOICES,
+        default=UNPROCESSED,
+        db_index=True,
+    )
+
+    due_date = models.DateTimeField(
+        verbose_name='срок',
+        db_index=True,
+    )
+
+    created_at = models.DateTimeField(
+        verbose_name='создан в',
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    modified_at = models.DateTimeField(
+        verbose_name='изменен в',
+        auto_now=True,
+        db_index=True,
+    )
+
+    class Meta:
+        verbose_name = 'заказ'
+        verbose_name_plural = 'заказы'
+
+    def __str__(self):
+        return f'Заказ № {self.id} от: {self.created_at} ({self.client})'

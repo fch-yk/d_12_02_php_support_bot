@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import (ChatState, Client, Manager, RegistrationRequest,
+from .models import (ChatState, Client, Manager, Order, RegistrationRequest,
                      Subcontractor)
 
 
@@ -51,3 +51,17 @@ class ManagerAdmin(admin.ModelAdmin):
         'telegram_user_id',
         'name',
     ]
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'client',
+        'created_at',
+        'due_date',
+        'status',
+        'subcontractor',
+    ]
+    readonly_fields = ['id', 'created_at', 'modified_at']
+    ordering = ['status', 'created_at']
