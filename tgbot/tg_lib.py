@@ -94,6 +94,8 @@ def get_subcontractor_orders(update, orders):
         message += f'''
                 Номер заявки: {order.id}
                 Описание заявки: {order.description}
+                Логин от админки: {order.client_site_login}
+                Пароль от админки: {order.client_site_password}
                 Клиент: {order.client}
                 ____________________________________
             '''
