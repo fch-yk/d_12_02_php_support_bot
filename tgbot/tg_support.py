@@ -5,7 +5,12 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
 from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor
-from .tg_lib import show_auth_keyboard, show_client_menu_keyboard, show_subcontractor_menu_keyboard
+from .tg_lib import (
+    show_auth_keyboard,
+    show_client_menu_keyboard,
+    show_subcontractor_menu_keyboard,
+    show_subcontractor_order_keyboard
+)
 
 
 def start(update, context):
@@ -19,8 +24,11 @@ def start(update, context):
         return "CLIENT_MENU"
 
     if is_subcontractor:
-        subcontractor_name = is_subcontractor.first().name
-        show_subcontractor_menu_keyboard(update, context, subcontractor_name)
+        subcontractor = is_subcontractor.first()
+        if subcontractor.is_banned:
+            update.message.reply_text('Вам заблокирован доступ!')
+            return "HANDLE_AUTH"
+        show_subcontractor_menu_keyboard(update, context, subcontractor.name)
         return "SUBCONTRACTOR_MENU"
 
     if not (is_client and is_subcontractor):
@@ -81,6 +89,11 @@ def handle_client_menu(update, context):
 
     elif context.user_data['order_detail'] == 'new_order_detail':
         context.user_data['order_detail'] = update.message.text
+        update.message.reply_text('Введите срок выполнения (количество дней)')
+        context.user_data['due'] = 'new_due'
+
+    elif context.user_data['due'] == 'new_due':
+        context.user_data['due'] = update.message.text
         update.message.reply_text('Введите логин для админ-панели сайта')
         context.user_data['site_login'] = 'new_site_login'
 
@@ -96,7 +109,7 @@ def handle_client_menu(update, context):
         order = Order.objects.create(
             client=client,
             description=context.user_data['order_detail'],
-            due_date=datetime.date.today() + datetime.timedelta(days=5),
+            due_date=datetime.date.today() + datetime.timedelta(days=context.user_data['due']),
             client_site_login=context.user_data['site_login'],
             client_site_password=context.user_data['site_password']
         )
@@ -109,26 +122,35 @@ def handle_client_menu(update, context):
     return 'CLIENT_MENU'
 
 
-def handle_subcontractor_menu(update, context):
-    if 'Список' in update.message.text:
-        order_list = Order.objects.filter(status=Order.UNPROCESSED)
-        if not order_list:
-            update.message.reply_text('Новых заявок нет')
-            return 'SUBCONTRACTOR_MENU'
+def get_subcontractor_orders(update, orders):
+    if not orders:
+        update.message.reply_text('Новых заявок нет')
+        return 'SUBCONTRACTOR_MENU'
 
-        message = ''
-        for order in order_list:
-            message += f'''
+    message = ''
+    for order in orders:
+        message += f'''
                 Номер заявки: {order.id}
                 Описание заявки: {order.description}
                 Клиент: {order.client}
                 ____________________________________
             '''
-        update.message.reply_text(message)
-        update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить')
-        context.user_data['new_order']='new_order'
+    update.message.reply_text(message)
 
-    elif context.user_data['new_order']=='new_order':
+def handle_subcontractor_menu(update, context):
+    if 'Список' in update.message.text:
+        orders = Order.objects.filter(status=Order.UNPROCESSED)
+        get_subcontractor_orders(orders)
+        update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить')
+        context.user_data['new_order'] = 'new_order'
+    elif 'Мои' in update.message.text:
+        orders = Order.objects.filter(status=Order.IN_PROGRESS,
+                                      subcontractor=update.message.chat_id)
+        get_subcontractor_orders(orders)
+        show_subcontractor_order_keyboard(update, context)
+        return 'SUBCONTRACTOR_MENU'
+
+    elif context.user_data['new_order'] == 'new_order':
         subcontractor = Subcontractor.objects.get(telegram_user_id=update.message.chat_id)
         order = Order.objects.get(pk=update.message.text)
 
