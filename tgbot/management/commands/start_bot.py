@@ -1,7 +1,13 @@
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from tgbot.tg_support import TgSupportBot, handle_auth, start, handle_client_menu
+from tgbot.tg_support import (
+    TgSupportBot,
+    start,
+    handle_auth,
+    handle_client_menu,
+    handle_subcontractor_menu
+)
 
 
 class Command(BaseCommand):
@@ -19,6 +25,7 @@ def start_bot():
             'START': start,
             'HANDLE_AUTH': handle_auth,
             'CLIENT_MENU': handle_client_menu,
+            'SUBCONTRACTOR_MENU': handle_subcontractor_menu,
         }
     )
     bot.updater.start_polling()
