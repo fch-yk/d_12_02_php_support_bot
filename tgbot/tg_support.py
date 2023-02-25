@@ -3,44 +3,65 @@ import textwrap
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
-from .models import ChatState, RegistrationRequest
-from .tg_lib import show_auth_keyboard
+from .models import ChatState, RegistrationRequest, Client, Subcontractor
+from .tg_lib import show_auth_keyboard, show_client_menu_keyboard
 
 
 def start(update, context):
-    show_auth_keyboard(update, context)
-    return "HANDLE_AUTH"
+    chat_id = update.message.chat_id
+    is_client = Client.objects.filter(telegram_user_id=chat_id)
+    subcontractor_id = Subcontractor.objects.filter(telegram_user_id=chat_id)
+
+    if is_client:
+        client_name = is_client.first().name
+        show_client_menu_keyboard(update, context, client_name)
+        return "CLIENT_MENU"
+
+    if not (is_client and subcontractor_id):
+        show_auth_keyboard(update, context)
+        return "HANDLE_AUTH"
+
 
 
 def handle_auth(update, context):
-    partner_role = RegistrationRequest.CLIENT
-    if 'исполнитель' in update.message.text:
-        partner_role = RegistrationRequest.SUBCONTRACTOR
+
+    if 'подрядчик' in update.message.text:
+        context.user_data['partner_role'] = RegistrationRequest.SUBCONTRACTOR
+    elif 'клиент' in update.message.text:
+        context.user_data['partner_role'] = RegistrationRequest.CLIENT
+
+
     if '🔐' in update.message.text:
-        update.message.reply_text('Название вашей организации')
-        context.user_data['name'] = '1'
+        update.message.reply_text('Введите свое имя и/или название организации')
+        context.user_data['name'] = 'new'
         return "HANDLE_AUTH"
-    elif context.user_data['name'] == '1':
+    elif context.user_data['name'] == 'new':
         context.user_data['name'] = update.message.text
-        update.message.reply_text('Краткая информация о вас')
-        context.user_data['description'] = '2'
+        update.message.reply_text('Напишите коротко о себе и/или о вашей организации')
+        context.user_data['description'] = 'new desc'
         return "HANDLE_AUTH"
-    elif context.user_data['description'] == '2':
+    elif context.user_data['description'] == 'new desc':
         context.user_data['description'] = update.message.text
         RegistrationRequest.objects.create(
             name=context.user_data['name'],
-            description= context.user_data['description'],
-            partner_role=partner_role,
+            description=context.user_data['description'],
+            partner_role=context.user_data['partner_role'],
             telegram_user_id=update.message.chat_id
         )
 
         message = textwrap.dedent('''
             Спасибо за вашу заявку
-            В ближайшее время с вами свяжется наш менеджер''')
+            В ближайшее время с вами свяжется наш менеджер!''')
 
         update.message.reply_text(text=message)
-        return 'HANDLE_NEW_USER'
+        return 'HANDLE_AUTH'
 
+def handle_client_menu(update, context):
+    if 'Список' in update.message.text:
+        update.message.reply_text('Список заявок')
+    else:
+        update.message.reply_text('Новая заявка')
+    return 'CLIENT_MENU'
 
 class TgSupportBot(object):
     def __init__(self, tg_token, states_functions):
