@@ -1,23 +1,15 @@
 import datetime
 import textwrap
 
+from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
-from telegram import ReplyKeyboardRemove
 
-from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor, Subscription
-from .tg_lib import (
-    show_auth_keyboard,
-    show_client_menu_keyboard,
-    show_subcontractor_menu_keyboard,
-    show_subcontractor_order_keyboard
-)
+from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor
+from .tg_lib import (get_client_orders, get_current_subscription, get_subcontractor_orders, show_auth_keyboard,
+                     show_client_menu_keyboard, show_subcontractor_menu_keyboard, show_subcontractor_order_keyboard,
+                     show_status_order_keyboard)
 
-
-def get_current_subscription(client):
-    current_month = datetime.date.today().month
-    return Subscription.objects.filter(client=client,
-                                       begins_at__month=current_month)
 
 def start(update, context):
     chat_id = update.message.chat_id
@@ -29,7 +21,7 @@ def start(update, context):
         update.message.reply_text(f'Здравствуйте {client_name}')
 
         if not get_current_subscription(is_client.first()):
-            update.message.reply_text('У вас нет действуйющей подписки! Обратитесь к менеджеру')
+            update.message.reply_text('У вас нет действующей подписки! Обратитесь к менеджеру')
             return "HANDLE_AUTH"
 
         show_client_menu_keyboard(update, context, client_name)
@@ -40,7 +32,7 @@ def start(update, context):
         if subcontractor.is_banned:
             update.message.reply_text('Вам заблокирован доступ!')
             return "HANDLE_AUTH"
-        show_subcontractor_menu_keyboard(update, context, subcontractor.name)
+        show_subcontractor_menu_keyboard(update, context)
         return "SUBCONTRACTOR_MENU"
 
     if not (is_client and is_subcontractor):
@@ -79,22 +71,6 @@ def handle_auth(update, context):
         update.message.reply_text(text=message)
         return 'HANDLE_AUTH'
 
-
-def get_client_orders(update, orders):
-    if not orders:
-        update.message.reply_text('Заявок нет')
-        return 'CLIENT_MENU'
-
-    message = ''
-    for order in orders:
-        message += f'''
-                Номер заявки: {order.id}
-                Описание заявки: {order.description}
-                Подрядчик: {order.subcontractor}
-                Статус заявки: {order.status}
-                ____________________________________
-            '''
-    update.message.reply_text(message)
 
 def handle_client_menu(update, context):
     if 'Список' in update.message.text:
@@ -141,26 +117,19 @@ def handle_client_menu(update, context):
     return 'CLIENT_MENU'
 
 
-def get_subcontractor_orders(update, orders):
-    if not orders:
-        update.message.reply_text('Новых заявок нет')
-        return 'SUBCONTRACTOR_MENU'
-
-    message = ''
-    for order in orders:
-        message += f'''
-                Номер заявки: {order.id}
-                Описание заявки: {order.description}
-                Клиент: {order.client}
-                ____________________________________
-            '''
-    update.message.reply_text(message)
-
 def handle_subcontractor_menu(update, context):
+    if update.message.text == 'Назад':
+        show_subcontractor_menu_keyboard(update, context)
+        return "SUBCONTRACTOR_MENU"
+
     if 'Список' in update.message.text:
         orders = Order.objects.filter(status=Order.UNPROCESSED)
         get_subcontractor_orders(update, orders)
-        update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить')
+
+        update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить',
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']])
+                                  )
+
         context.user_data['new_order'] = 'new_order'
     elif 'Мои' in update.message.text:
         subcontractor = Subcontractor.objects.get(telegram_user_id=update.message.chat_id)
@@ -168,7 +137,7 @@ def handle_subcontractor_menu(update, context):
                                       subcontractor=subcontractor)
         get_subcontractor_orders(update, orders)
         show_subcontractor_order_keyboard(update, context)
-        return 'SUBCONTRACTOR_MENU'
+        return 'SUBCONTRACTOR_ORDER_MENU'
 
     elif context.user_data['new_order'] == 'new_order':
         subcontractor = Subcontractor.objects.get(telegram_user_id=update.message.chat_id)
@@ -181,6 +150,45 @@ def handle_subcontractor_menu(update, context):
 
     return 'SUBCONTRACTOR_MENU'
 
+
+def handle_subcontractor_order_menu(update, context):
+    if update.message.text == 'Назад':
+        show_subcontractor_menu_keyboard(update, context)
+        return "SUBCONTRACTOR_MENU"
+
+    if 'Изменить статус заявки' in update.message.text:
+        update.message.reply_text('Для выбора статуса заявки выберите ее номер и нажмите Отправить',
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']])
+                                  )
+        context.user_data['order'] = 'status'
+    elif context.user_data['order'] == 'status':
+        show_status_order_keyboard(update, context)
+        context.user_data['order'] = 'change'
+        context.user_data['order_id'] = int(update.message.text)
+        return 'SUBCONTRACTOR_ORDER_MENU'
+
+    elif context.user_data['order'] == 'change':
+        status = update.message.text
+        order_id = context.user_data['order_id']
+
+        subcontractor = Subcontractor.objects.get(telegram_user_id=int(update.message.chat_id))
+        order = subcontractor.orders.filter(id=order_id).first()
+        if status == 'Выполнен':
+            order.status = Order.COMPLETED
+        elif status == 'Отклонен':
+            order.status = Order.DECLINED
+        order.save()
+
+        update.message.reply_text('Статус заказа успешно изменен')
+        show_subcontractor_menu_keyboard(update, context)
+
+
+        message = f'Статус вашего заказа с №{order_id} изменен на {status}'
+        context.bot.send_message(chat_id=order.client.telegram_user_id, text=message)
+
+        return 'SUBCONTRACTOR_MENU'
+
+        # context.bot.send_message(chat_id=update.message.chat_id, text=message)
 
 class TgSupportBot(object):
     def __init__(self, tg_token, states_functions):

@@ -6,7 +6,8 @@ from tgbot.tg_support import (
     start,
     handle_auth,
     handle_client_menu,
-    handle_subcontractor_menu
+    handle_subcontractor_menu,
+    handle_subcontractor_order_menu
 )
 
 
@@ -26,6 +27,7 @@ def start_bot():
             'HANDLE_AUTH': handle_auth,
             'CLIENT_MENU': handle_client_menu,
             'SUBCONTRACTOR_MENU': handle_subcontractor_menu,
+            'SUBCONTRACTOR_ORDER_MENU': handle_subcontractor_order_menu,
         }
     )
     bot.updater.start_polling()
