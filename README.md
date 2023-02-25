@@ -24,6 +24,7 @@ pip install -r requirements.txt
   - `DATABASE` - a database address (obligatory), go [here](https://github.com/jacobian/dj-database-url) for more;
   - `TELEGRAM_TOKEN` - a telegram token for php support bot (obligatory);
   - `LANGUAGE_CODE` - a string representing the language code for this installation (optional, `ru-Ru` by default);
+  - `ORDER_PRICE` - is an order execution price (obligatory);
 
 To set up variables in .env file, create it in the root directory of the project and fill it up like this:
 
@@ -34,6 +35,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 DATABASE=db.sqlite3
 TELEGRAM_TOKEN=replace_me
 LANGUAGE_CODE=en-us
+ORDER_PRICE=5000
 ```
 
 - Create SQLite database:
@@ -58,6 +60,11 @@ python manage.py runserver
 
 - Go to [the admin site](http://127.0.0.1:8000/admin/) and fill the base;
 - Go to [the home page](http://127.0.0.1:8000/).
+- Start the bot:
+
+```bash
+python manage.py start_bot
+```
 
 ## Project goals
 

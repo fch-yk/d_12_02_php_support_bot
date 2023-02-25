@@ -125,3 +125,4 @@ STATIC_ROOT = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 TELEGRAM_ACCESS_TOKEN = env.str('TELEGRAM_TOKEN')
+ORDER_PRICE = env.int('ORDER_PRICE')
