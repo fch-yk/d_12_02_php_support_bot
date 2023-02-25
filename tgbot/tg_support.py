@@ -5,7 +5,7 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 from telegram import ReplyKeyboardRemove
 
-from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor
+from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor, Subscription
 from .tg_lib import (
     show_auth_keyboard,
     show_client_menu_keyboard,
@@ -14,6 +14,11 @@ from .tg_lib import (
 )
 
 
+def get_current_subscription(client):
+    current_month = datetime.date.today().month
+    return Subscription.objects.filter(client=client,
+                                       begins_at__month=current_month)
+
 def start(update, context):
     chat_id = update.message.chat_id
     is_client = Client.objects.filter(telegram_user_id=chat_id)
@@ -21,6 +26,12 @@ def start(update, context):
 
     if is_client:
         client_name = is_client.first().name
+        update.message.reply_text(f'Здравствуйте {client_name}')
+
+        if not get_current_subscription(is_client.first()):
+            update.message.reply_text('У вас нет действуйющей подписки! Обратитесь к менеджеру')
+            return "HANDLE_AUTH"
+
         show_client_menu_keyboard(update, context, client_name)
         return "CLIENT_MENU"
 
