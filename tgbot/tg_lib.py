@@ -38,15 +38,14 @@ def show_subcontractor_menu_keyboard(update, context, client_name):
     )
     update.message.reply_text(text=message, reply_markup=reply_markup)
 
-def show_subcontractor_order_keyboard(update, context, client_name):
-    message = f'Добрый день {client_name}! Выберите дальнейшую команду.'
+def show_subcontractor_order_keyboard(update, context):
 
     reply_markup = ReplyKeyboardMarkup(
         [[KeyboardButton("Изменить статус заявки")],
          [KeyboardButton("Назад")], ],
         resize_keyboard=True
     )
-    update.message.reply_text(text=message, reply_markup=reply_markup)
+    update.message.reply_text(text='Выберите дальнейшее действие', reply_markup=reply_markup)
 
 def show_client_order_keyboard(update, context, client_name):
     message = f'Список Ваших заявок. Выберите дальнейшее действие'
