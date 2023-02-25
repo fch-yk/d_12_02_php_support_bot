@@ -3,6 +3,7 @@ import textwrap
 
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
+from telegram import ReplyKeyboardRemove
 
 from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor
 from .tg_lib import (
@@ -68,23 +69,30 @@ def handle_auth(update, context):
         return 'HANDLE_AUTH'
 
 
-def handle_client_menu(update, context):
-    if 'Список' in update.message.text:
-        client = Client.objects.get(telegram_user_id=update.message.chat_id)
-        order_list = Order.objects.filter(client=client)
-        message = ''
-        for order in order_list:
-            message += f'''
+def get_client_orders(update, orders):
+    if not orders:
+        update.message.reply_text('Заявок нет')
+        return 'CLIENT_MENU'
+
+    message = ''
+    for order in orders:
+        message += f'''
                 Номер заявки: {order.id}
                 Описание заявки: {order.description}
                 Подрядчик: {order.subcontractor}
-                Статус заявки: {order.status.label}
+                Статус заявки: {order.status}
                 ____________________________________
             '''
-        update.message.reply_text(message)
+    update.message.reply_text(message)
+
+def handle_client_menu(update, context):
+    if 'Список' in update.message.text:
+        client = Client.objects.get(telegram_user_id=update.message.chat_id)
+        orders = Order.objects.filter(client=client)
+        get_client_orders(update, orders)
 
     elif 'Оформить' in update.message.text:
-        update.message.reply_text('Введите описание вашей заявки')
+        update.message.reply_text('Введите описание вашей заявки', reply_markup=ReplyKeyboardRemove())
         context.user_data['order_detail'] = 'new_order_detail'
 
     elif context.user_data['order_detail'] == 'new_order_detail':
@@ -109,7 +117,7 @@ def handle_client_menu(update, context):
         order = Order.objects.create(
             client=client,
             description=context.user_data['order_detail'],
-            due_date=datetime.date.today() + datetime.timedelta(days=context.user_data['due']),
+            due_date=datetime.date.today() + datetime.timedelta(days=int(context.user_data['due'])),
             client_site_login=context.user_data['site_login'],
             client_site_password=context.user_data['site_password']
         )
@@ -140,13 +148,14 @@ def get_subcontractor_orders(update, orders):
 def handle_subcontractor_menu(update, context):
     if 'Список' in update.message.text:
         orders = Order.objects.filter(status=Order.UNPROCESSED)
-        get_subcontractor_orders(orders)
+        get_subcontractor_orders(update, orders)
         update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить')
         context.user_data['new_order'] = 'new_order'
     elif 'Мои' in update.message.text:
+        subcontractor = Subcontractor.objects.get(telegram_user_id=update.message.chat_id)
         orders = Order.objects.filter(status=Order.IN_PROGRESS,
-                                      subcontractor=update.message.chat_id)
-        get_subcontractor_orders(orders)
+                                      subcontractor=subcontractor)
+        get_subcontractor_orders(update, orders)
         show_subcontractor_order_keyboard(update, context)
         return 'SUBCONTRACTOR_MENU'
 
