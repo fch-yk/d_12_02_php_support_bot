@@ -2,7 +2,7 @@ import textwrap
 import datetime
 
 from telegram import ReplyKeyboardMarkup, KeyboardButton
-from .models import Subscription
+from .models import Subscription, Order, Subcontractor
 
 def show_auth_keyboard(update, context):
     message = textwrap.dedent('''
@@ -32,6 +32,8 @@ def show_client_menu_keyboard(update, context, client_name):
 def show_subcontractor_menu_keyboard(update, context):
     message = f'Выберите дальнейшую команду.'
 
+    subcontractor = Subcontractor.objects.get(telegram_user_id=update.message.chat_id)
+
     reply_markup = ReplyKeyboardMarkup(
         [[KeyboardButton("Список новых заявок")],
          [KeyboardButton("Мои заявки")], ],
@@ -42,7 +44,8 @@ def show_subcontractor_menu_keyboard(update, context):
 def show_subcontractor_order_keyboard(update, context):
 
     reply_markup = ReplyKeyboardMarkup(
-        [[KeyboardButton("Изменить статус заявки")],
+        [[KeyboardButton("Вопрос заказчику")],
+         [KeyboardButton("Изменить статус заявки")],
          [KeyboardButton("Назад")], ],
         resize_keyboard=True
     )

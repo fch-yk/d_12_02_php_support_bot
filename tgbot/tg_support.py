@@ -135,8 +135,6 @@ def handle_client_order_menu(update, context):
         pass
 
 
-
-
 def handle_subcontractor_menu(update, context):
     if update.message.text == 'Назад':
         show_subcontractor_menu_keyboard(update, context)
@@ -147,7 +145,7 @@ def handle_subcontractor_menu(update, context):
         get_subcontractor_orders(update, orders)
 
         update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить',
-                                  reply_markup=ReplyKeyboardMarkup([['Назад']])
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']], resize_keyboard=True)
                                   )
 
         context.user_data['subcontractor_menu'] = 'new_order'
@@ -166,30 +164,59 @@ def handle_subcontractor_menu(update, context):
         order.subcontractor = subcontractor
         order.status = Order.IN_PROGRESS
         order.save()
-        update.message.reply_text('Заяка сохранена за вами. Для ее просмотра перейдите в список ваших заявок')
+        update.message.reply_text('Заявка сохранена за вами. Для ее просмотра перейдите в список ваших заявок')
 
     return 'SUBCONTRACTOR_MENU'
 
 
+def send_question(update, context, user_data):
+    client = Order.objects.get(id=user_data['order_id']).client
+    context.bot.send_message(chat_id=client.telegram_user_id, text=update.message.text)
+
 def handle_subcontractor_order_menu(update, context):
+    user_data = context.user_data
+
     if update.message.text == 'Назад':
         show_subcontractor_menu_keyboard(update, context)
-        return "SUBCONTRACTOR_MENU"
+        return 'SUBCONTRACTOR_MENU'
 
     if 'Изменить статус заявки' in update.message.text:
-        update.message.reply_text('Для выбора статуса заявки выберите ее номер и нажмите Отправить',
-                                  reply_markup=ReplyKeyboardMarkup([['Назад']])
+        update.message.reply_text('Для смены статуса заявки выберите ее номер и нажмите Отправить',
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']], resize_keyboard=True)
                                   )
-        context.user_data['order'] = 'status'
-    elif context.user_data['order'] == 'status':
-        show_status_order_keyboard(update, context)
-        context.user_data['order'] = 'change'
-        context.user_data['order_id'] = int(update.message.text)
+        user_data['order_menu'] = 'change_order'
+        user_data['order_action'] = 'change_status'
         return 'SUBCONTRACTOR_ORDER_MENU'
 
-    elif context.user_data['order'] == 'change':
+    elif 'Вопрос заказчику' in update.message.text:
+        update.message.reply_text('По какому заказу вопрос?',
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']], resize_keyboard=True)
+                                  )
+        user_data['order_menu'] = 'change_order'
+        user_data['order_action'] = 'send_question'
+        return 'SUBCONTRACTOR_ORDER_MENU'
+
+    elif user_data['order_menu'] == 'change_order':
+        user_data['order_id'] = int(update.message.text)
+
+        if user_data['order_action'] == 'send_question':
+            update.message.reply_text('Введите текст вопроса и нажмите Отправить',
+                                      reply_markup=ReplyKeyboardRemove())
+            user_data['order_menu'] = 'send_question'
+        else:
+            show_status_order_keyboard(update, context)
+            user_data['order_menu'] = 'change_status'
+        return 'SUBCONTRACTOR_ORDER_MENU'
+
+    elif user_data['order_menu'] == 'send_question':
+        send_question(update, context, user_data)
+        update.message.reply_text('Сообщение успешно отправлено')
+        show_subcontractor_menu_keyboard(update, context)
+        return 'SUBCONTRACTOR_MENU'
+
+    elif user_data['order_menu'] == 'change_status':
         status = update.message.text
-        order_id = context.user_data['order_id']
+        order_id = user_data['order_id']
 
         subcontractor = Subcontractor.objects.get(telegram_user_id=int(update.message.chat_id))
         order = subcontractor.orders.filter(id=order_id).first()
@@ -206,7 +233,6 @@ def handle_subcontractor_order_menu(update, context):
         context.bot.send_message(chat_id=order.client.telegram_user_id, text=message)
 
         return 'SUBCONTRACTOR_MENU'
-
 
 class TgSupportBot(object):
     def __init__(self, tg_token, states_functions):
