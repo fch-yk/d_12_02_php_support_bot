@@ -19,12 +19,13 @@ def show_auth_keyboard(update, context):
     update.message.reply_text(text=message, reply_markup=reply_markup)
 
 
-def show_client_menu_keyboard(update, context, client_name):
-    message = f'Добрый день {client_name}! Выберите дальнейшую команду.'
+def show_client_menu_keyboard(update, context):
+    message = f'Выберите дальнейшую команду.'
 
     reply_markup = ReplyKeyboardMarkup(
         [[KeyboardButton("Оформить новую заявку")],
-         [KeyboardButton("Список моих заявок")], ],
+         [KeyboardButton("Список моих заявок")],
+         [KeyboardButton("Помощь менеджера")],],
         resize_keyboard=True
     )
     update.message.reply_text(text=message, reply_markup=reply_markup)
@@ -36,7 +37,8 @@ def show_subcontractor_menu_keyboard(update, context):
 
     reply_markup = ReplyKeyboardMarkup(
         [[KeyboardButton("Список новых заявок")],
-         [KeyboardButton("Мои заявки")], ],
+         [KeyboardButton("Мои заявки")],
+         [KeyboardButton("Финансы")], ],
         resize_keyboard=True
     )
     update.message.reply_text(text=message, reply_markup=reply_markup)
@@ -55,7 +57,7 @@ def show_client_order_keyboard(update, context):
     message = f'Список Ваших заявок. Выберите дальнейшее действие'
 
     reply_markup = ReplyKeyboardMarkup(
-        [[KeyboardButton("Внести изменение в заявку")],
+        [[KeyboardButton("Вопрос исполнителю")],
          [KeyboardButton("Назад")], ],
         resize_keyboard=True
     )
@@ -82,7 +84,7 @@ def get_client_orders(update, orders):
                 Номер заявки: {order.id}
                 Описание заявки: {order.description}
                 Подрядчик: {order.subcontractor}
-                Статус заявки: {order.status}
+                Статус заявки: {order.get_status_display()}
                 ____________________________________
             '''
     update.message.reply_text(message)
