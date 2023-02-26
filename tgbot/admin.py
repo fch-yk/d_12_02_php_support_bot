@@ -44,6 +44,13 @@ class SubcontractorAdmin(admin.ModelAdmin):
     ]
     list_editable = ['is_banned']
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.is_banned:
+            obj.orders.filter(
+                status=Order.IN_PROGRESS,
+            ).update(status=Order.UNPROCESSED)
+
 
 @admin.register(Manager)
 class ManagerAdmin(admin.ModelAdmin):
