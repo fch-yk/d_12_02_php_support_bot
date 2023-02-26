@@ -5,11 +5,12 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
-from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor
+from .models import ChatState, Client, Order, RegistrationRequest, Subcontractor, Manager
 from .tg_lib import (get_client_orders, get_current_subscription, get_subcontractor_orders, show_auth_keyboard,
                      show_client_menu_keyboard, show_status_order_keyboard, show_subcontractor_menu_keyboard,
-                     show_subcontractor_order_keyboard)
+                     show_subcontractor_order_keyboard, show_client_order_keyboard)
 
+from phpsupport.settings import ORDER_PRICE
 
 def start(update, context):
     chat_id = update.message.chat_id
@@ -24,7 +25,7 @@ def start(update, context):
             update.message.reply_text('У вас нет действующей подписки! Обратитесь к менеджеру')
             return "HANDLE_AUTH"
 
-        show_client_menu_keyboard(update, context, client_name)
+        show_client_menu_keyboard(update, context)
         return "CLIENT_MENU"
 
     if is_subcontractor:
@@ -73,40 +74,57 @@ def handle_auth(update, context):
 
 
 def handle_client_menu(update, context):
+    user_data = context.user_data
     if 'Список' in update.message.text:
         client = Client.objects.get(telegram_user_id=update.message.chat_id)
         orders = Order.objects.filter(client=client)
         get_client_orders(update, orders)
+        show_client_order_keyboard(update, context)
+        return 'CLIENT_ORDER_MENU'
 
-    elif 'Оформить' in update.message.text:
+    if 'Помощь менеджера' in update.message.text:
+        update.message.reply_text('Введите текст вопроса и нажмите Отправить',
+                                  reply_markup=ReplyKeyboardRemove())
+        user_data['client_menu'] = 'send_question'
+        return 'CLIENT_MENU'
+    elif user_data['client_menu'] == 'send_question':
+        managers = Manager.objects.all()
+        client = Client.objects.get(telegram_user_id=update.message.chat_id)
+        for manager in managers:
+            message = f'Вам сообщение от клиента {client.name}:'
+            context.bot.send_message(chat_id=manager.telegram_user_id, text=message + update.message.text)
+        update.message.reply_text('Сообщение успешно отправлено')
+        return 'CLIENT_MENU'
+
+    if 'Оформить' in update.message.text:
         update.message.reply_text('Введите описание вашей заявки', reply_markup=ReplyKeyboardRemove())
-        context.user_data['order_detail'] = 'new_order_detail'
+        user_data['order_detail'] = 'new_order_detail'
 
-    elif context.user_data['order_detail'] == 'new_order_detail':
-        context.user_data['order_detail'] = update.message.text
+    elif user_data['order_detail'] == 'new_order_detail':
+        user_data['order_detail'] = update.message.text
         update.message.reply_text('Введите срок выполнения (количество дней)')
-        context.user_data['due'] = 'new_due'
+        user_data['due'] = 'new_due'
 
-    elif context.user_data['due'] == 'new_due':
-        context.user_data['due'] = update.message.text
+    elif user_data['due'] == 'new_due':
+        user_data['due'] = update.message.text
         update.message.reply_text('Введите логин для админ-панели сайта')
-        context.user_data['site_login'] = 'new_site_login'
+        user_data['site_login'] = 'new_site_login'
 
-    elif context.user_data['site_login'] == 'new_site_login':
-        context.user_data['site_login'] = update.message.text
+    elif user_data['site_login'] == 'new_site_login':
+        user_data['site_login'] = update.message.text
         update.message.reply_text('Введите пароль для админ-панели сайта')
-        context.user_data['site_password'] = 'new_site_password'
+        user_data['site_password'] = 'new_site_password'
 
-    elif context.user_data['site_password'] == 'new_site_password':
-        context.user_data['site_password'] = update.message.text
+    elif user_data['site_password'] == 'new_site_password':
+        user_data['site_password'] = update.message.text
 
         client = Client.objects.get(telegram_user_id=update.message.chat_id)
         order = Order.objects.create(
             client=client,
-            description=context.user_data['order_detail'],
-            due_date=datetime.date.today() + datetime.timedelta(days=int(context.user_data['due'])),
-            client_site_login=context.user_data['site_login'],
-            client_site_password=context.user_data['site_password']
+            description=user_data['order_detail'],
+            due_date=datetime.date.today() + datetime.timedelta(days=int(user_data['due'])),
+            client_site_login=user_data['site_login'],
+            client_site_password=user_data['site_password']
         )
 
         message = textwrap.dedent(f'''
@@ -118,21 +136,32 @@ def handle_client_menu(update, context):
 
 
 def handle_client_order_menu(update, context):
+    user_data = context.user_data
     if update.message.text == 'Назад':
-        show_subcontractor_menu_keyboard(update, context)
+        show_client_menu_keyboard(update, context)
         return "CLIENT_MENU"
 
-    if 'Список моих заявок' in update.message.text:
-        client = Client.objects.get(telegram_user_id=update.message.chat_id)
-        orders = Order.objects.filter(client=client)
-        get_client_orders(update, orders)
-
-        update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить',
-                                  reply_markup=ReplyKeyboardMarkup([['Назад']])
+    if 'Вопрос исполнителю' in update.message.text:
+        update.message.reply_text('Выберите номер заявки по которой задать вопрос',
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']], resize_keyboard=True)
                                   )
-        context.user_data['client_menu'] = 'change_order'
-    elif context.user_data['client_menu'] == 'change_order':
-        pass
+        user_data['client_menu'] = 'change_order'
+        return 'CLIENT_ORDER_MENU'
+
+    elif user_data['client_menu'] == 'change_order':
+        update.message.reply_text('Введите текст вопроса и нажмите Отправить',
+                                  reply_markup=ReplyKeyboardRemove())
+        user_data['order_id'] = int(update.message.text)
+        user_data['client_menu'] = 'send_question'
+        return 'CLIENT_ORDER_MENU'
+
+    if user_data['client_menu'] == 'send_question':
+        order = Order.objects.get(id=user_data['order_id'])
+        subcontractor = order.subcontractor
+        context.bot.send_message(chat_id=subcontractor.telegram_user_id, text=update.message.text)
+        update.message.reply_text('Ваш вопрос успешно отправлен')
+        show_client_menu_keyboard(update, context)
+        return 'CLIENT_MENU'
 
 
 def handle_subcontractor_menu(update, context):
@@ -143,7 +172,7 @@ def handle_subcontractor_menu(update, context):
     if 'Список' in update.message.text:
         orders = Order.objects.filter(status=Order.UNPROCESSED)
         get_subcontractor_orders(update, orders)
-
+        update.message.reply_text(f'Ставка за выполненный заказ составляет {ORDER_PRICE}')
         update.message.reply_text('Для выбора заявки выберите ее номер и нажмите Отправить',
                                   reply_markup=ReplyKeyboardMarkup([['Назад']], resize_keyboard=True)
                                   )
@@ -155,6 +184,18 @@ def handle_subcontractor_menu(update, context):
                                       subcontractor=subcontractor)
         get_subcontractor_orders(update, orders)
         show_subcontractor_order_keyboard(update, context)
+        return 'SUBCONTRACTOR_ORDER_MENU'
+
+    elif 'Финансы' in update.message.text:
+        subcontractor = Subcontractor.objects.get(telegram_user_id=update.message.chat_id)
+        complete_order_counts = Order.objects.filter(status=Order.COMPLETED,
+                                                     subcontractor=subcontractor).count()
+        message = f'''Всего выполнено заказов: {complete_order_counts}
+                  Ставка за заказ: {ORDER_PRICE}
+                  Заработано всего: {complete_order_counts*ORDER_PRICE}'''
+        update.message.reply_text(text=message,
+                                  reply_markup=ReplyKeyboardMarkup([['Назад']], resize_keyboard=True)
+                                  )
         return 'SUBCONTRACTOR_ORDER_MENU'
 
     elif context.user_data['subcontractor_menu'] == 'new_order':
