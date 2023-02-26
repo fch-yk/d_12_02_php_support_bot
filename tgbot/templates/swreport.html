@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Отчет по зарплате подрядчиков</title>
+  <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 5px;
+    }
+    table.report {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    table.report .description {
+      text-align: left;
+    }
+    table.report .parameter {
+      text-align: right;
+    }
+    table.report .total {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h1 style="color:blue;text-align:center;">Отчет по зарплате подрядчиков</h1>
+  <h2 style="color:green;text-align:center;">за период {{ start_date }} - {{ end_date }}</h2>
+
+
+  <table class="report">
+    <tr>
+      <th class="description">Подрядчик</th>
+      <th class="parameter">Количество заказов</th>
+      <th class="parameter">Сумма (руб.)</th>
+    </tr>
+    {% for wages in orders_subcontractors_numbers %}
+      <tr>
+        <td class="description">{{ wages.subcontractor__name }} ({{ wages.subcontractor }})</td>
+        <td class="parameter">{{ wages.num_orders }}</td>
+        <td class="parameter">{{ wages.sum|floatformat:2 }}</td>
+      </tr>
+    {% endfor %}
+    <tr>
+      <td class="description total">Всего:</td>
+      <td class="parameter total">{{ orders_number }}</td>
+      <td class="parameter total">{{ total_sum|floatformat:2 }}</td>
+    </tr>
+  </table>
+  <p style="color:grey;text-align:center;">* Оплата за выполнение одного заказа {{order_price}} руб.</p>
+</body>
+</html>
