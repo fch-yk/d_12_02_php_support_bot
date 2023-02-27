@@ -12,5 +12,8 @@ urlpatterns = [
         'subcontractors_wages_report/<int:months_number>/',
         views.show_subcontractors_wages_report
     ),
-
+    path(
+        'unprocessed_orders_report/',
+        views.show_unprocessed_orders_report
+    ),
 ]

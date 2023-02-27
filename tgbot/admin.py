@@ -1,4 +1,9 @@
+import telegram
+from admin_extra_buttons.api import ExtraButtonsMixin, button
+from django.conf import settings
 from django.contrib import admin
+from django.http import HttpResponse
+from django.utils.timezone import localtime
 
 from .models import (ChatState, Client, Manager, Order, RegistrationRequest,
                      Subcontractor, Subscription, Tariff)
@@ -61,7 +66,7 @@ class ManagerAdmin(admin.ModelAdmin):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ExtraButtonsMixin, admin.ModelAdmin):
     list_display = [
         'id',
         'client',
@@ -72,6 +77,27 @@ class OrderAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ['id', 'created_at', 'modified_at']
     ordering = ['status', 'created_at']
+
+    @button(change_form=True, label='Напомнить менеджерам')
+    def prompt_managers(self, request, id):
+        response = ''
+        bot = telegram.Bot(token=settings.TELEGRAM_ACCESS_TOKEN)
+        order = Order.objects.get(id=id)
+        created_at = localtime(order.created_at)
+        managers = Manager.objects.all()
+        for manager in managers:
+            text = (
+                'Разберитесь, почему долго не берут в работу '
+                f'заказ № {order.id} '
+                f'от {created_at.strftime("%d.%m.%Y %H:%M")}'
+            )
+            bot.send_message(chat_id=manager.telegram_user_id, text=text)
+            response += (
+                f'\n Отправлено сообщение менеджеру {manager.name} '
+                f'с текстом "{text}"'
+            )
+
+        return HttpResponse(response)
 
 
 @admin.register(Tariff)

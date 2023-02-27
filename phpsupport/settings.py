@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'tgbot',
     'debug_toolbar',
+    'admin_extra_buttons',
 ]
 
 MIDDLEWARE = [

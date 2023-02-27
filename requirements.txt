@@ -4,3 +4,4 @@ environs==9.5.0
 python-dateutil==2.8.2
 gunicorn==20.0.4
 django_debug_toolbar==3.8.1
+django-admin-extra-buttons==1.5.6

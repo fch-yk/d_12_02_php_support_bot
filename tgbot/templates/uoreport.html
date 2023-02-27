@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Мониторинг необработанных заказов</title>
+  <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 5px;
+    }
+    table.report {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    table.report .description {
+      text-align: center;
+    }
+    table.report .parameter {
+      text-align: right;
+    }
+    table.report .total {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h1 style="color:blue;text-align:center;">Мониторинг необработанных заказов</h1>
+
+  <table class="report">
+    <tr>
+      <th class="description">Номер заказа</th>
+      <th class="description">Создан в</th>
+      <th class="description">Ссылка на админку</th>
+    </tr>
+    {% for order in orders %}
+      <tr>
+        <td class="description">{{ order.id }}</td>
+        <td class="description">{{ order.created_at|date:"d.m.Y H:i" }}</td>
+        <td class="description"><a href="{% url 'admin:tgbot_order_change' order.id %}">Перейти</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+
+</body>
+</html>

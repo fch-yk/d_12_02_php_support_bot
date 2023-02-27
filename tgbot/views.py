@@ -15,7 +15,6 @@ def show_home(request):
 
 
 def show_orders_quantity_report(request, months_number):
-    now = datetime.date.today()
     start_date, end_date = get_report_month_period_dates(months_number)
 
     orders = Order.objects.filter(
@@ -62,6 +61,17 @@ def show_subcontractors_wages_report(request, months_number):
         'order_price': order_price,
     }
     return render(request, 'swreport.html', context=context)
+
+
+def show_unprocessed_orders_report(request):
+    orders = Order.objects.filter(
+        status=Order.UNPROCESSED
+    ).order_by('created_at')
+
+    context = {
+        'orders': orders,
+    }
+    return render(request, 'uoreport.html', context=context)
 
 
 def get_report_month_period_dates(subtracted_months_number):
