@@ -25,6 +25,7 @@ pip install -r requirements.txt
   - `TELEGRAM_TOKEN` - a telegram token for php support bot (obligatory);
   - `LANGUAGE_CODE` - a string representing the language code for this installation (optional, `ru-Ru` by default);
   - `ORDER_PRICE` - is an order execution price (obligatory);
+  - `MONITOR_PAUSE` - is a pause in seconds to check if there exist overdue orders (optional, 15 seconds by default)
 
 To set up variables in .env file, create it in the root directory of the project and fill it up like this:
 
@@ -36,6 +37,7 @@ DATABASE=db.sqlite3
 TELEGRAM_TOKEN=replace_me
 LANGUAGE_CODE=en-us
 ORDER_PRICE=5000
+MONITOR_PAUSE=15
 ```
 
 - Create SQLite database:
@@ -60,10 +62,16 @@ python manage.py runserver
 
 - Go to [the admin site](http://127.0.0.1:8000/admin/) and fill the base;
 - Go to [the home page](http://127.0.0.1:8000/).
-- Start the bot:
+- Start the main handler of the bot:
 
 ```bash
 python manage.py start_bot
+```
+
+- Start the monitor handler of the bot (the process checks if there exist overdue orders and sends messages to the managers)
+
+```bash
+python manage.py start_monitor_bot
 ```
 
 ## Project goals
