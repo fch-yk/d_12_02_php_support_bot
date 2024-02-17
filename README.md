@@ -1,6 +1,6 @@
-# PHP Support
+# Technical support bot
 
-PHP support platform
+This is a Telegram bot that accepts users' requests for technical support.
 
 ## Prerequisites
 
